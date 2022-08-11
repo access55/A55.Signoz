@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.105
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{52CF79C2-3027-4E75-83D2-5C6BEE3B3EC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Signoz.AspNetCore", "src\Signoz.AspNetCore\Signoz.AspNetCore.csproj", "{8ED9F844-4C7B-447A-AE89-B3BDF9319C7F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Signoz.Api.Sample", "src\Signoz.Api.Sample\Signoz.Api.Sample.csproj", "{D0E75B3F-E499-425B-91D4-3F1E7E9B2888}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8ED9F844-4C7B-447A-AE89-B3BDF9319C7F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8ED9F844-4C7B-447A-AE89-B3BDF9319C7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8ED9F844-4C7B-447A-AE89-B3BDF9319C7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8ED9F844-4C7B-447A-AE89-B3BDF9319C7F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D0E75B3F-E499-425B-91D4-3F1E7E9B2888}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D0E75B3F-E499-425B-91D4-3F1E7E9B2888}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0E75B3F-E499-425B-91D4-3F1E7E9B2888}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0E75B3F-E499-425B-91D4-3F1E7E9B2888}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8ED9F844-4C7B-447A-AE89-B3BDF9319C7F} = {52CF79C2-3027-4E75-83D2-5C6BEE3B3EC7}
+		{D0E75B3F-E499-425B-91D4-3F1E7E9B2888} = {52CF79C2-3027-4E75-83D2-5C6BEE3B3EC7}
+	EndGlobalSection
+EndGlobal
