@@ -85,3 +85,8 @@ dotnet format .
 
 ## 📝 Versioning
 This project is versioned with [Semantic Versioning](https://semver.org/) aka `SemVer` using [GitVersion](https://gitversion.net/docs/)
+
+Commit messages:
+
+Adding +semver: breaking or +semver: major will cause the major version to be increased, +semver: feature or +semver: minor will bump minor and +semver: patch or +semver: fix will bump the patch.
+
