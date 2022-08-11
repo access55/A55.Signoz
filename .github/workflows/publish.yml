@@ -39,7 +39,7 @@ jobs:
       run: dotnet pack src/Signoz.AspNetCore -p:Version='${{ steps.gitversion.outputs.SemVer }}' -c Release
 
     - name: Upload NuGet package to GitHub
-      if: steps.gitversion.outputs.CommitsSinceVersionSource > O
+      if: steps.gitversion.outputs.CommitsSinceVersionSource > 0
       uses: actions/upload-artifact@v2
       with:
         name: nugetPackage
