@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push: 
+    branches: ["master"]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest    
+    outputs: 
+      Version: ${{ steps.gitversion.outputs.SemVer }}
+      CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }} 
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v0.9.7
+      with:
+        versionSpec: 5.x
+
+    - name: Determine Version
+      uses: gittools/actions/gitversion/execute@v0.9.7
+      id: gitversion 
+
+    - name: Display GitVersion outputs
+      run: |
+        echo "Version: ${{ steps.gitversion.outputs.SemVer }}"
+        echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
+    
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v2
+      with:
+          global-json-file: global.json
+
+    - name: Build and Pack NuGet package
+      run: dotnet pack src/Signoz.AspNetCore -p:Version='${{ steps.gitversion.outputs.SemVer }}' -c Release
+
+    - name: Upload NuGet package to GitHub
+      uses: actions/upload-artifact@v2
+      with:
+        name: nugetPackage
+        path: src/Signoz.AspNetCore/bin/Release/ 
+        
+  release:
+    runs-on: ubuntu-latest    
+    needs: build
+    if: github.ref == 'refs/heads/master' 
+    
+    steps:  
+    - name: Download nuget package artifact
+      uses: actions/download-artifact@v1.0.0
+      with:
+        name: nugetPackage
+
+    - name: Prep packages
+      run: dotnet nuget add source --username access55 --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/access55/index.json"
+
+    - name: Push package to GitHub packages 
+      if: needs.build.outputs.CommitsSinceVersionSource > 0  #Only release if there has been a commit/version change
+      run: dotnet nuget push nugetPackage/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }}  --source "github"
+    
+    - name: Create Release
+      if: needs.build.outputs.CommitsSinceVersionSource > 0 
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+      with:
+        tag: ${{ needs.build.outputs.Version }}
+        artifacts: "nugetPackage/*"
+        name: Release ${{ needs.build.outputs.Version }}
+        
