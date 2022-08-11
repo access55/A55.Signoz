@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Instrumentation.AspNetCore;
 
 namespace A55.Signoz;
 
@@ -27,9 +31,9 @@ public static class SignozTelemetryExtensions
         var config = builder.Configuration.GetSection(SignozSettingsSection).Get<SignozSettings>();
 
         if (!config.Enabled) return;
-
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
+
+        var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
 
         var configureResource = (ResourceBuilder r) =>
         {
@@ -41,53 +45,73 @@ public static class SignozTelemetryExtensions
                 serviceInstanceId: Environment.MachineName);
         };
 
-        builder.Services
+        builder.Services.Configure<AspNetCoreInstrumentationOptions>(c => c.RecordException = true);
+
+        if (config.ExportTraces)
+            AddTraces(builder.Services, configureResource, config);
+
+        if (config.ExportMetrics)
+            AddMetrics(builder.Services, configureResource, config);
+
+        if (config.ExportLogs)
+            AddLogs(builder.Logging, builder.Services, configureResource, config);
+    }
+
+    static void AddTraces(IServiceCollection services, Action<ResourceBuilder> configureResource,
+        SignozSettings config) =>
+        services
             .AddOpenTelemetryTracing(traceBuilder =>
             {
                 traceBuilder
                     .ConfigureResource(configureResource)
                     .SetSampler(new AlwaysOnSampler())
-                    .AddAspNetCoreInstrumentation()
+                    .AddNpgsql()
                     .AddHttpClientInstrumentation()
-                    .AddSqlClientInstrumentation(options => options.RecordException = true);
+                    .AddAspNetCoreInstrumentation(c => c.RecordException = true);
 
-                if (config.UseOtlp && config.OtlpEndpoint is not null)
+                if (config.ValidOtlp)
                     traceBuilder.AddOtlpExporter(o => o.Endpoint = new Uri(config.OtlpEndpoint));
 
                 if (config.UseConsole)
                     traceBuilder.AddConsoleExporter();
             });
 
-        builder.Services.AddOpenTelemetryMetrics(metricsBuilder =>
-        {
-            metricsBuilder
-                .AddRuntimeInstrumentation()
-                .AddHttpClientInstrumentation()
-                .AddAspNetCoreInstrumentation();
-
-            if (config.UseOtlp && config.OtlpEndpoint is not null)
-                metricsBuilder.AddOtlpExporter(o => o.Endpoint = new Uri(config.OtlpEndpoint));
-
-            if (config.UseConsole)
-                metricsBuilder.AddConsoleExporter();
-        });
-
-        if (config.ExportLogs)
-        {
-            builder.Logging.AddOpenTelemetry(options =>
+    static void AddMetrics(IServiceCollection services, Action<ResourceBuilder> configureResource,
+        SignozSettings config) =>
+        services
+            .AddOpenTelemetryMetrics(metricsBuilder =>
             {
-                options.ConfigureResource(configureResource);
-                if (config.UseOtlp && config.OtlpEndpoint is not null)
-                    options.AddOtlpExporter(otlpOptions => otlpOptions.Endpoint = new Uri(config.OtlpEndpoint));
+                metricsBuilder
+                    .ConfigureResource(configureResource)
+                    .AddRuntimeInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddAspNetCoreInstrumentation();
+
+                if (config.ValidOtlp)
+                    metricsBuilder.AddOtlpExporter(o => o.Endpoint = new Uri(config.OtlpEndpoint));
+
                 if (config.UseConsole)
-                    options.AddConsoleExporter();
+                    metricsBuilder.AddConsoleExporter();
             });
-            builder.Services.Configure<OpenTelemetryLoggerOptions>(opt =>
-            {
-                opt.IncludeScopes = true;
-                opt.ParseStateValues = true;
-                opt.IncludeFormattedMessage = true;
-            });
+
+    static void AddLogs(
+        ILoggingBuilder loggerBuilder,
+        IServiceCollection services,
+        Action<ResourceBuilder> configureResource,
+        SignozSettings config)
+    {
+        void ConfigureOptions(OpenTelemetryLoggerOptions opt)
+        {
+            opt.IncludeScopes = true;
+            opt.ParseStateValues = true;
+            opt.IncludeFormattedMessage = true;
+            opt.ConfigureResource(configureResource);
+            if (config.UseConsole) opt.AddConsoleExporter();
+            if (config.ValidOtlp)
+                opt.AddOtlpExporter(otlpOptions => otlpOptions.Endpoint = new Uri(config.OtlpEndpoint));
         }
+
+        services.Configure<OpenTelemetryLoggerOptions>(ConfigureOptions);
+        loggerBuilder.AddOpenTelemetry(ConfigureOptions);
     }
 }
