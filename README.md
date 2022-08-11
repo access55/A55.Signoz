@@ -39,7 +39,7 @@ var app = builder.Build();
 
 And add the `Signoz` key in your `appsettings.json` and/or `appsettings.Environment.json`
 
-```json
+```json5
 {
   // other configuration keys
   "Signoz": {
@@ -55,7 +55,7 @@ And add the `Signoz` key in your `appsettings.json` and/or `appsettings.Environm
 }
 
 ```
-> ### See a configured [SAMPLE HERE](src/Signoz.Api.Sample/)
+> ### App configuration [SAMPLE HERE](src/Signoz.Api.Sample/)
 
 ---
 ## 🌱 Environment Variables
