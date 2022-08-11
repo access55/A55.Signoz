@@ -1,0 +1,19 @@
+version: 2
+registries:
+    nuget-github:
+        type: nuget-feed
+        url: https://nuget.pkg.github.com/access55/index.json
+        username: ${{ secrets.NUGET_USERNAME }}
+        password: ${{ secrets.NUGET_PAT }}
+    nuget-org:
+        type: nuget-feed
+        url: https://api.nuget.org/v3/index.json
+updates:
+    - package-ecosystem: nuget
+      registries:
+          - nuget-github
+          - nuget-org
+      directory: /
+      schedule:
+          interval: daily
+      open-pull-requests-limit: 10

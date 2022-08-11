@@ -5,13 +5,39 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>A55.Signoz</RootNamespace>
     <Nullable>enable</Nullable>
+  </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageIcon>icon.png</PackageIcon>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <DebugType>embedded</DebugType>
+    <DocumentationFile>bin\$(Configuration)\$(AssemblyName).xml</DocumentationFile>
+    <Authors>access55</Authors>
+    <Description>Simplify adding Signoz telemetry in ASP.NET Core apps</Description>
+    <RepositoryType>Git</RepositoryType>
+    <PackageTags>signoz, telemetry, opentelemetry, instrumentation</PackageTags>
+    <Company>A55</Company>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <PackageProjectUrl>https://github.com/access55/A55.Signoz</PackageProjectUrl>
     <RepositoryUrl>https://github.com/access55/A55.Signoz</RepositoryUrl>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+      <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sentry.AspNetCore" Version="3.20.1" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.0.0-rc9.5" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.0.0-rc9.5" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.0.0" />

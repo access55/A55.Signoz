@@ -36,10 +36,10 @@ jobs:
           global-json-file: global.json
 
     - name: Build and Pack NuGet package
-      run: dotnet pack src/Signoz.AspNetCore -p:Version='${{ steps.gitversion.outputs.SemVer }}' -c Release
+      run: dotnet pack src/Signoz.AspNetCore -p:Version='${{ steps.gitversion.outputs.SemVer }}' \
+            --configuration Release --include-symbols 
 
-    - name: Upload NuGet package to GitHub
-      if: steps.gitversion.outputs.CommitsSinceVersionSource > 0
+    - name: Upload NuGet package artifact to GitHub
       uses: actions/upload-artifact@v2
       with:
         name: nugetPackage
@@ -47,8 +47,8 @@ jobs:
         
   release:
     runs-on: ubuntu-latest    
+    if: github.ref == 'refs/heads/master' and needs.build.outputs.CommitsSinceVersionSource > 0  #Only release if there has been a commit/version change
     needs: build
-    if: github.ref == 'refs/heads/master' 
     
     steps:  
     - name: Download nuget package artifact
@@ -60,11 +60,9 @@ jobs:
       run: dotnet nuget add source --username access55 --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/access55/index.json"
 
     - name: Push package to GitHub packages 
-      if: needs.build.outputs.CommitsSinceVersionSource > 0  #Only release if there has been a commit/version change
       run: dotnet nuget push nugetPackage/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }}  --source "github"
     
     - name: Create Release
-      if: needs.build.outputs.CommitsSinceVersionSource > 0 
       uses: ncipollo/release-action@v1
       with:
         tag: ${{ needs.build.outputs.Version }}

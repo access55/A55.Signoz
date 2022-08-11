@@ -11,10 +11,17 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-public static class TelemetryExtensions
+/// <summary>
+/// Extensions Configurations for Signoz in AspNetCore
+/// </summary>
+public static class SignozTelemetryExtensions
 {
     const string SignozSettingsSection = "Signoz";
 
+    /// <summary>
+    /// enable and configure signoz on WebApplicationBuilder
+    /// </summary>
+    /// <param name="builder"></param>
     public static void UseSignoz(this WebApplicationBuilder builder)
     {
         var config = builder.Configuration.GetSection(SignozSettingsSection).Get<SignozSettings>();
