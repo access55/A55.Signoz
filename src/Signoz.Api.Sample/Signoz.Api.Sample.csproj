@@ -11,6 +11,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Signoz.AspNetCore\Signoz.AspNetCore.csproj" />
+      <ProjectReference Include="..\Signoz.AspNetCore\A55.Signoz.AspNetCore.csproj" />
     </ItemGroup>
 </Project>

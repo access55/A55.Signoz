@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{52CF79C2-3027-4E75-83D2-5C6BEE3B3EC7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Signoz.AspNetCore", "src\Signoz.AspNetCore\Signoz.AspNetCore.csproj", "{8ED9F844-4C7B-447A-AE89-B3BDF9319C7F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Signoz.AspNetCore", "src\Signoz.AspNetCore\A55.Signoz.AspNetCore.csproj", "{8ED9F844-4C7B-447A-AE89-B3BDF9319C7F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Signoz.Api.Sample", "src\Signoz.Api.Sample\Signoz.Api.Sample.csproj", "{D0E75B3F-E499-425B-91D4-3F1E7E9B2888}"
 EndProject
