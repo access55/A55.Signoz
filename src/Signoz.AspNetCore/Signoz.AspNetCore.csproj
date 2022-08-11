@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>A55.Signoz</RootNamespace>
     <Nullable>enable</Nullable>
+
+    <RepositoryUrl>https://github.com/access55/A55.Signoz</RepositoryUrl>
   </PropertyGroup>
 
 
