@@ -39,8 +39,7 @@ jobs:
       run: dotnet format --verify-no-changes .
 
     - name: Build and Pack NuGet package
-      run: dotnet pack src/Signoz.AspNetCore -p:Version='${{ steps.gitversion.outputs.SemVer }}' \
-            --configuration Release --include-symbols
+      run: dotnet pack src/Signoz.AspNetCore --configuration Release --include-symbols -p:Version='${{ steps.gitversion.outputs.SemVer }}'
 
     - name: Upload NuGet package artifact to GitHub
       uses: actions/upload-artifact@v2
