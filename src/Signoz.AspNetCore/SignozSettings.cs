@@ -1,11 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace A55.Signoz;
+namespace A55.SigNoz;
 
 /// <summary>
 /// Signoz configuration binded from appsettings or configurarion
 /// </summary>
-public sealed class SignozSettings
+public sealed class SigNozSettings
 {
     /// <summary>
     /// Enable or disables telemetry
@@ -19,6 +19,11 @@ public sealed class SignozSettings
     public string? ServiceName { get; set; }
 
     /// <summary>
+    /// A Suffix for ServiceName
+    /// </summary>
+    public string? ServiceNameSuffix { get; set; }
+
+    /// <summary>
     /// The OTLP signoz endpoint
     /// </summary>
     public string? OtlpEndpoint { get; set; }
@@ -29,9 +34,9 @@ public sealed class SignozSettings
     public bool UseConsole { get; set; }
 
     /// <summary>
-    /// Flags if opentelemetry send to the OTPL endpoint
+    /// Flags if opentelemetry send to the OTPL endpoint (default: true)
     /// </summary>
-    public bool UseOtlp { get; set; }
+    public bool UseOtlp { get; set; } = true;
 
     /// <summary>
     /// Flags if opentelemetry will send logs
@@ -39,14 +44,14 @@ public sealed class SignozSettings
     public bool ExportLogs { get; set; }
 
     /// <summary>
-    /// Flags if opentelemetry will send traces
+    /// Flags if opentelemetry will send traces (default: true)
     /// </summary>
-    public bool ExportTraces { get; set; }
+    public bool ExportTraces { get; set; } = true;
 
     /// <summary>
-    /// Flags if opentelemetry will send metrics
+    /// Flags if opentelemetry will send metrics (default: true)
     /// </summary>
-    public bool ExportMetrics { get; set; }
+    public bool ExportMetrics { get; set; } = true;
 
     [MemberNotNullWhen(true, nameof(OtlpEndpoint))]
     internal bool ValidOtlp => UseOtlp && OtlpEndpoint is not null;

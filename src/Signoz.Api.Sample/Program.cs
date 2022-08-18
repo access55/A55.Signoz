@@ -1,8 +1,8 @@
-using A55.Signoz;
+using A55.SigNoz;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.UseSignoz();
+builder.UseSigNoz();
 
 builder.Services
     .AddEndpointsApiExplorer()

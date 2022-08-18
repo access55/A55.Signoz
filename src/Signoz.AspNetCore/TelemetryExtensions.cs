@@ -1,13 +1,14 @@
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using OpenTelemetry;
-using OpenTelemetry.Exporter;
-using OpenTelemetry.Instrumentation.AspNetCore;
 
-namespace A55.Signoz;
+namespace A55.SigNoz;
 
 using System.Reflection;
 using OpenTelemetry.Logs;
@@ -16,89 +17,166 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 /// <summary>
-/// Extensions Configurations for Signoz in AspNetCore
+/// Extensions Configurations for SigNoz in AspNetCore
 /// </summary>
-public static class SignozTelemetryExtensions
+public static class SigNozTelemetry
 {
-    const string SignozSettingsSection = "Signoz";
+    const string SigNozSettingsSection = "SigNoz";
+
+    static Action<ResourceBuilder> GetConfigureResource(SigNozSettings config, string applicationNameFallback) => r => r
+        .AddService(
+            serviceName: (
+                string.IsNullOrWhiteSpace(config.ServiceName)
+                    ? applicationNameFallback
+                    : config.ServiceName
+            ).ToLowerInvariant() + (config.ServiceNameSuffix ?? string.Empty),
+            serviceVersion: Assembly.GetCallingAssembly().GetName().Version?.ToString() ?? "0.0.0",
+            serviceInstanceId: Environment.MachineName);
 
     /// <summary>
-    /// enable and configure signoz on WebApplicationBuilder
+    /// enable and configure SigNoz on WebApplicationBuilder
     /// </summary>
     /// <param name="builder"></param>
-    public static void UseSignoz(this WebApplicationBuilder builder)
+    public static void UseSigNoz(this WebApplicationBuilder builder)
     {
-        var config = builder.Configuration.GetSection(SignozSettingsSection).Get<SignozSettings>();
+        var config = builder.Configuration.GetSection(SigNozSettingsSection).Get<SigNozSettings>();
 
         if (!config.Enabled) return;
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
-        var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
-
-        var configureResource = (ResourceBuilder r) =>
-        {
-            r.AddService(
-                string.IsNullOrWhiteSpace(config.ServiceName)
-                    ? builder.Environment.ApplicationName.ToLowerInvariant()
-                    : config.ServiceName.ToLowerInvariant(),
-                serviceVersion: assemblyVersion,
-                serviceInstanceId: Environment.MachineName);
-        };
-
-        builder.Services.Configure<AspNetCoreInstrumentationOptions>(c => c.RecordException = true);
+        var configureResource = GetConfigureResource(config, builder.Environment.ApplicationName);
 
         if (config.ExportTraces)
-            AddTraces(builder.Services, configureResource, config);
+            builder.Services
+                .AddOpenTelemetryTracing(b => b
+                    .ConfigureResource(configureResource)
+                    .AddCustomTraces(config)
+                    .AddAspNetCoreInstrumentation(c => c.RecordException = true));
 
         if (config.ExportMetrics)
-            AddMetrics(builder.Services, configureResource, config);
+            builder.Services
+                .AddOpenTelemetryMetrics(b => b
+                    .ConfigureResource(configureResource)
+                    .AddCustomMeter(config)
+                    .AddAspNetCoreInstrumentation());
 
         if (config.ExportLogs)
-            AddLogs(builder.Logging, builder.Services, configureResource, config);
+            builder.Logging.AddSigNoz(configureResource, config);
     }
 
-    static void AddTraces(IServiceCollection services, Action<ResourceBuilder> configureResource,
-        SignozSettings config) =>
-        services
-            .AddOpenTelemetryTracing(traceBuilder =>
+    /// <summary>
+    /// Start collect telemetry in the scope
+    /// </summary>
+    /// <param name="environment"></param>
+    /// <param name="config"></param>
+    /// <param name="sourceName"></param>
+    /// <returns></returns>
+    public static TelemetryScope BeginScope(
+        IHostEnvironment environment,
+        SigNozSettings config,
+        [CallerMemberName] string sourceName = "")
+    {
+        DisposableCollection disposables = new();
+        Activity? activity = null;
+        if (!config.Enabled) return new(disposables, activity);
+
+        var configureResource = GetConfigureResource(config, environment.ApplicationName);
+
+        if (config.ExportTraces)
+        {
+            ActivitySource appActivity = new(Assembly.GetCallingAssembly().GetName().Name!);
+            var tracer = Sdk.CreateTracerProviderBuilder()
+                .ConfigureResource(configureResource)
+                .AddSource(appActivity.Name)
+                .AddCustomTraces(config)
+                .Build();
+            disposables.Add(tracer);
+
+            activity = appActivity.StartActivity(sourceName);
+            if (activity is not null)
             {
-                traceBuilder
-                    .ConfigureResource(configureResource)
-                    .SetSampler(new AlwaysOnSampler())
-                    .AddNpgsql()
-                    .AddHttpClientInstrumentation()
-                    .AddAspNetCoreInstrumentation(c => c.RecordException = true);
+                activity.SetTag(nameof(environment.EnvironmentName), environment.EnvironmentName);
+                activity.SetTag(nameof(Environment.MachineName), Environment.MachineName);
+                disposables.Add(activity);
+            }
+        }
 
-                if (config.ValidOtlp)
-                    traceBuilder.AddOtlpExporter(o => o.Endpoint = new Uri(config.OtlpEndpoint));
+        if (config.ExportMetrics)
+        {
+            var meter = Sdk.CreateMeterProviderBuilder()
+                .ConfigureResource(configureResource)
+                .AddCustomMeter(config)
+                .Build();
+            disposables.Add(meter);
+        }
 
-                if (config.UseConsole)
-                    traceBuilder.AddConsoleExporter();
-            });
+        return new(disposables, activity);
+    }
 
-    static void AddMetrics(IServiceCollection services, Action<ResourceBuilder> configureResource,
-        SignozSettings config) =>
-        services
-            .AddOpenTelemetryMetrics(metricsBuilder =>
-            {
-                metricsBuilder
-                    .ConfigureResource(configureResource)
-                    .AddRuntimeInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddAspNetCoreInstrumentation();
+    static TracerProviderBuilder AddCustomTraces(this TracerProviderBuilder builder, SigNozSettings config)
+    {
+        builder
+            .SetSampler(new AlwaysOnSampler())
+            .AddNpgsql()
+            .AddHttpClientInstrumentation();
 
-                if (config.ValidOtlp)
-                    metricsBuilder.AddOtlpExporter(o => o.Endpoint = new Uri(config.OtlpEndpoint));
+        if (config.ValidOtlp)
+            builder.AddOtlpExporter(o => o.Endpoint = new Uri(config.OtlpEndpoint));
 
-                if (config.UseConsole)
-                    metricsBuilder.AddConsoleExporter();
-            });
+        if (config.UseConsole)
+            builder.AddConsoleExporter();
 
-    static void AddLogs(
-        ILoggingBuilder loggerBuilder,
-        IServiceCollection services,
+        return builder;
+    }
+
+    static MeterProviderBuilder AddCustomMeter(this MeterProviderBuilder builder, SigNozSettings config)
+    {
+        builder
+            .AddRuntimeInstrumentation()
+            .AddHttpClientInstrumentation();
+
+        if (config.ValidOtlp)
+            builder.AddOtlpExporter(o => o.Endpoint = new Uri(config.OtlpEndpoint));
+
+        if (config.UseConsole)
+            builder.AddConsoleExporter();
+
+        return builder;
+    }
+
+    static SigNozSettings AddSigNozConfig(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var configSection = configuration.GetSection(SigNozSettingsSection);
+        services.Configure<SigNozSettings>(configSection);
+        return configSection.Get<SigNozSettings>();
+    }
+
+    /// <summary>
+    /// Adds SigNoz logging capabilities
+    /// </summary>
+    /// <param name="loggerBuilder"></param>
+    /// <param name="configuration"></param>
+    /// <param name="environment"></param>
+    public static void AddSigNoz(
+        this ILoggingBuilder loggerBuilder,
+        IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        var config = loggerBuilder.Services.AddSigNozConfig(configuration);
+
+        if (config is not { Enabled: true, ExportLogs: true })
+            return;
+
+        var configureResource = GetConfigureResource(config, environment.ApplicationName);
+        loggerBuilder.AddSigNoz(configureResource, config);
+    }
+
+    static ILoggingBuilder AddSigNoz(
+        this ILoggingBuilder loggerBuilder,
         Action<ResourceBuilder> configureResource,
-        SignozSettings config)
+        SigNozSettings config)
     {
         void ConfigureOptions(OpenTelemetryLoggerOptions opt)
         {
@@ -108,10 +186,11 @@ public static class SignozTelemetryExtensions
             opt.ConfigureResource(configureResource);
             if (config.UseConsole) opt.AddConsoleExporter();
             if (config.ValidOtlp)
-                opt.AddOtlpExporter(otlpOptions => otlpOptions.Endpoint = new Uri(config.OtlpEndpoint));
+                opt.AddOtlpExporter(otlp => otlp.Endpoint = new Uri(config.OtlpEndpoint));
         }
 
-        services.Configure<OpenTelemetryLoggerOptions>(ConfigureOptions);
+        loggerBuilder.Services.Configure<OpenTelemetryLoggerOptions>(ConfigureOptions);
         loggerBuilder.AddOpenTelemetry(ConfigureOptions);
+        return loggerBuilder;
     }
 }
