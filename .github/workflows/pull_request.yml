@@ -47,12 +47,3 @@ jobs:
     - name: Build
       run: dotnet build src/Signoz.AspNetCore --configuration release
       
-  dependabot:
-    runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' }}
-    steps:
-        - name: Enable auto-merge for Dependabot PRs
-          env:
-              GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          run: gh pr merge --auto --merge "${{github.event.pull_request.html_url}}"
-
