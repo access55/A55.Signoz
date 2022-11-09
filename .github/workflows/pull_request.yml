@@ -45,4 +45,5 @@ jobs:
       run: dotnet format --verify-no-changes .
 
     - name: Build
-      run: dotnet build src/signoz.aspnetcore --configuration release
+      run: dotnet build src/Signoz.AspNetCore --configuration release
+      
