@@ -1,12 +1,14 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using OpenTelemetry;
+using OpenTelemetry.Instrumentation.AspNetCore;
 
 namespace A55.SigNoz;
 
@@ -51,7 +53,11 @@ public static class SigNozTelemetry
                 .AddOpenTelemetryTracing(b => b
                     .ConfigureResource(configureResource)
                     .AddCustomTraces(config)
-                    .AddAspNetCoreInstrumentation(c => c.RecordException = true));
+                    .AddAspNetCoreInstrumentation(options =>
+                    {
+                        options.RecordException = true;
+                        AddCorrelationId(options);
+                    }));
 
         if (config.ExportMetrics)
             builder.Services
@@ -64,59 +70,26 @@ public static class SigNozTelemetry
             builder.Logging.AddSigNoz(configureResource, config);
     }
 
-    /// <summary>
-    /// Start collect telemetry in the scope
-    /// </summary>
-    /// <param name="environment"></param>
-    /// <param name="config"></param>
-    /// <param name="sourceName"></param>
-    /// <returns></returns>
-    public static TelemetryScope BeginScope(
-        IHostEnvironment environment,
-        SigNozSettings config,
-        [CallerMemberName] string sourceName = "")
+    static void AddCorrelationId(AspNetCoreInstrumentationOptions options)
     {
-        DisposableCollection disposables = new();
-        Activity? activity = null;
-        if (!config.Enabled) return new(disposables, activity);
-
-        var configureResource = GetConfigureResource(config, environment.ApplicationName);
-
-        if (config.ExportTraces)
+        static void AddCorrelation(Activity? activity, IHeaderDictionary context)
         {
-            ActivitySource appActivity = new(Assembly.GetCallingAssembly().GetName().Name!);
-            var tracer = Sdk.CreateTracerProviderBuilder()
-                .ConfigureResource(configureResource)
-                .AddSource(appActivity.Name)
-                .AddCustomTraces(config)
-                .Build();
-            disposables.Add(tracer);
-
-            activity = appActivity.StartActivity(sourceName);
-            if (activity is not null)
-            {
-                activity.SetTag(nameof(environment.EnvironmentName), environment.EnvironmentName);
-                activity.SetTag(nameof(Environment.MachineName), Environment.MachineName);
-                disposables.Add(activity);
-            }
+            if (!context.TryGetValue("X-Correlation-ID", out var correlationId)) return;
+            activity?.SetTag("http.conversation_id", correlationId);
+            activity?.SetTag("http.correlation_id", correlationId);
         }
 
-        if (config.ExportMetrics)
-        {
-            var meter = Sdk.CreateMeterProviderBuilder()
-                .ConfigureResource(configureResource)
-                .AddCustomMeter(config)
-                .Build();
-            disposables.Add(meter);
-        }
-
-        return new(disposables, activity);
+        options.EnrichWithHttpRequest = (activity, httpRequest) =>
+            AddCorrelation(activity, httpRequest.Headers);
+        options.EnrichWithHttpResponse = (activity, httpResponse) =>
+            AddCorrelation(activity, httpResponse.Headers);
     }
 
     static TracerProviderBuilder AddCustomTraces(this TracerProviderBuilder builder, SigNozSettings config)
     {
         builder
             .SetSampler(new AlwaysOnSampler())
+            .AddSource("A55.Subdivisions")
             .AddNpgsql()
             .AddHttpClientInstrumentation();
 
@@ -132,6 +105,7 @@ public static class SigNozTelemetry
     static MeterProviderBuilder AddCustomMeter(this MeterProviderBuilder builder, SigNozSettings config)
     {
         builder
+            .AddMeter("A55.Subdivisions")
             .AddRuntimeInstrumentation()
             .AddHttpClientInstrumentation();
 
@@ -166,7 +140,7 @@ public static class SigNozTelemetry
     {
         var config = loggerBuilder.Services.AddSigNozConfig(configuration);
 
-        if (config is not { Enabled: true, ExportLogs: true })
+        if (config is not {Enabled: true, ExportLogs: true})
             return;
 
         var configureResource = GetConfigureResource(config, environment.ApplicationName);
