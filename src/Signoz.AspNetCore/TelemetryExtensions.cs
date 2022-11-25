@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -24,8 +25,10 @@ using OpenTelemetry.Trace;
 public static class SigNozTelemetry
 {
     const string SigNozSettingsSection = "SigNoz";
+    const string SqsHost = "sqs.*.amazonaws.com";
 
-    static Action<ResourceBuilder> GetConfigureResource(SigNozSettings config, string applicationNameFallback) => r => r
+    static Action<ResourceBuilder> GetConfigureResource(SigNozSettings config,
+        string applicationNameFallback) => r => r
         .AddService(
             serviceName: (
                 string.IsNullOrWhiteSpace(config.ServiceName)
@@ -85,13 +88,15 @@ public static class SigNozTelemetry
             AddCorrelation(activity, httpResponse.Headers);
     }
 
-    static TracerProviderBuilder AddCustomTraces(this TracerProviderBuilder builder, SigNozSettings config)
+    static TracerProviderBuilder AddCustomTraces(this TracerProviderBuilder builder,
+        SigNozSettings config)
     {
         builder
             .SetSampler(new AlwaysOnSampler())
             .AddSource("A55.Subdivisions")
             .AddNpgsql()
-            .AddHttpClientInstrumentation();
+            .AddHttpClientInstrumentation(o => o.FilterHttpRequestMessage = request =>
+                !Regex.IsMatch(request.RequestUri?.Host ?? "", SqsHost));
 
         if (config.ValidOtlp)
             builder.AddOtlpExporter(o => o.Endpoint = new Uri(config.OtlpEndpoint));
@@ -102,7 +107,8 @@ public static class SigNozTelemetry
         return builder;
     }
 
-    static MeterProviderBuilder AddCustomMeter(this MeterProviderBuilder builder, SigNozSettings config)
+    static MeterProviderBuilder AddCustomMeter(this MeterProviderBuilder builder,
+        SigNozSettings config)
     {
         builder
             .AddMeter("A55.Subdivisions")
@@ -140,7 +146,7 @@ public static class SigNozTelemetry
     {
         var config = loggerBuilder.Services.AddSigNozConfig(configuration);
 
-        if (config is not { Enabled: true, ExportLogs: true })
+        if (config is not {Enabled: true, ExportLogs: true})
             return;
 
         var configureResource = GetConfigureResource(config, environment.ApplicationName);
