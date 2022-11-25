@@ -146,7 +146,7 @@ public static class SigNozTelemetry
     {
         var config = loggerBuilder.Services.AddSigNozConfig(configuration);
 
-        if (config is not {Enabled: true, ExportLogs: true})
+        if (config is not { Enabled: true, ExportLogs: true })
             return;
 
         var configureResource = GetConfigureResource(config, environment.ApplicationName);
