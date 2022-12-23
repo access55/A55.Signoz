@@ -1,5 +1,5 @@
 # A55 Signoz Extensions for .NET
-
+[![Nuget](https://img.shields.io/nuget/v/A55.Signoz.AspNetCore.svg?style=flat)](https://www.nuget.org/packages/A55.Signoz.AspNetCore)
 [![CI](https://github.com/access55/A55.Signoz/actions/workflows/publish.yml/badge.svg)](https://github.com/access55/A55.Signoz/actions/workflows/publish.yml)
 ![](https://img.shields.io/badge/Lang-C%23-green)
 ![https://editorconfig.org/](https://img.shields.io/badge/style-EditorConfig-black)
