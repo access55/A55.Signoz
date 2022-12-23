@@ -8,21 +8,22 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageIcon>icon.png</PackageIcon>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <DebugType>embedded</DebugType>
-    <DocumentationFile>bin\$(Configuration)\$(AssemblyName).xml</DocumentationFile>
+    <Description>Simplify opentelemetry configuration in ASP.NET Core</Description>
     <Authors>access55</Authors>
-    <Description>Simplify adding Signoz telemetry in ASP.NET Core apps</Description>
-    <RepositoryType>Git</RepositoryType>
-    <PackageTags>signoz, telemetry, opentelemetry, instrumentation</PackageTags>
     <Company>A55</Company>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>signoz, telemetry, opentelemetry, instrumentation</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>GitHub</RepositoryType>
     <PackageProjectUrl>https://github.com/access55/A55.Signoz</PackageProjectUrl>
     <RepositoryUrl>https://github.com/access55/A55.Signoz</RepositoryUrl>
+
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <DocumentationFile>bin\$(Configuration)\$(AssemblyName).xml</DocumentationFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
@@ -37,13 +38,29 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Npgsql.OpenTelemetry" Version="7.0.0" />
+    <PackageReference Include="Npgsql.OpenTelemetry" Version="7.0.1" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.0.0-rc9.9" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.0.0-rc9.9" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.1.0-beta.1" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.4.0-beta.3" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol.Logs" Version="1.4.0-beta.3" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.0.0-rc9.9" />
+    <PackageReference Update="Roslynator.Analyzers" Version="4.2.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Update="Roslynator.CodeAnalysis.Analyzers" Version="4.2.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Update="Roslynator.Formatting.Analyzers" Version="4.2.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Update="SonarAnalyzer.CSharp" Version="8.51.0.59060">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
