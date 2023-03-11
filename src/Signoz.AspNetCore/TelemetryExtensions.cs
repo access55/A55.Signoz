@@ -51,9 +51,11 @@ public static class SigNozTelemetry
 
         var configureResource = GetConfigureResource(config, builder.Environment.ApplicationName);
 
+        var openTelemetry = builder.Services.AddOpenTelemetry();
+
         if (config.ExportTraces)
-            builder.Services
-                .AddOpenTelemetryTracing(b => b
+            openTelemetry
+                .WithTracing(b => b
                     .ConfigureResource(configureResource)
                     .AddCustomTraces(config)
                     .AddAspNetCoreInstrumentation(options =>
@@ -63,8 +65,8 @@ public static class SigNozTelemetry
                     }));
 
         if (config.ExportMetrics)
-            builder.Services
-                .AddOpenTelemetryMetrics(b => b
+            openTelemetry
+                .WithMetrics(b => b
                     .ConfigureResource(configureResource)
                     .AddCustomMeter(config)
                     .AddAspNetCoreInstrumentation());
@@ -146,7 +148,7 @@ public static class SigNozTelemetry
     {
         var config = loggerBuilder.Services.AddSigNozConfig(configuration);
 
-        if (config is not { Enabled: true, ExportLogs: true })
+        if (config is not {Enabled: true, ExportLogs: true})
             return;
 
         var configureResource = GetConfigureResource(config, environment.ApplicationName);
@@ -163,7 +165,11 @@ public static class SigNozTelemetry
             opt.IncludeScopes = true;
             opt.ParseStateValues = true;
             opt.IncludeFormattedMessage = true;
-            opt.ConfigureResource(configureResource);
+
+            var rb = ResourceBuilder.CreateDefault();
+            configureResource(rb);
+            opt.SetResourceBuilder(rb);
+
             if (config.UseConsole) opt.AddConsoleExporter();
             if (config.ValidOtlp)
                 opt.AddOtlpExporter(otlp => otlp.Endpoint = new Uri(config.OtlpEndpoint));
